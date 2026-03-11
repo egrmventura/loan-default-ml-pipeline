@@ -6,13 +6,13 @@ install:
     pip install -r requirements.txt
 
 train:
-   python src/training/train_model.python
+    python src/training/train_model.python
 
 run-api:
-   uvicorn src.inference.api:app --reload
+    uvicorn src.inference.api:app --reload
 
 lint:
-   flake8 src/
+    flake8 src/
 
 test:
     pytest tests/
