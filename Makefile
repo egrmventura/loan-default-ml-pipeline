@@ -1,12 +1,12 @@
 setup:
-    python -m venv venv
+    python3 -m venv venv
     source venv/bin/activate && pip install -r requirements.txt
 
 install:
     pip install -r requirements.txt
 
 train:
-    python src/training/train_model.python
+    python src/training/train_model.py
 
 run-api:
     uvicorn src.inference.api:app --reload
