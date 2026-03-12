@@ -16,3 +16,6 @@ lint:
 
 test:
 	. venv/bin/activate && pytest tests/
+
+ingestion_demo:
+	. venv/bin/activate && python src/loan_default_ml_pipeline/ingestion/load_data.py
