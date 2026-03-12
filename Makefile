@@ -6,7 +6,7 @@ setup:
 	. venv/bin/activate && pip install -r requirements.txt    
 
 train:
-	. venv/bin/activate && python src/training/train_model.py
+	. venv/bin/activate && python src/loan_default_ml_pipeline/training/train_model.py
 
 run-api:
 	. venv/bin/activate && uvicorn src.inference.api:app --reload
@@ -16,3 +16,6 @@ lint:
 
 test:
 	. venv/bin/activate && pytest tests/
+
+ingestion_demo:
+	. venv/bin/activate && python src/loan_default_ml_pipeline/ingestion/load_data.py
