@@ -12,5 +12,5 @@ if __name__ == "__main__":
 
     print("Rows: ", len(df))
     print("Columns: ", df.columns.tolist())
-    print(df.isnull().sum())
+    print(df[df.colummns].isnull().sum())
     print(df.head())
