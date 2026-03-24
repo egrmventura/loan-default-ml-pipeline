@@ -5,8 +5,9 @@ from sklearn.model_selection import train_test_split
 import joblib
 
 # –– Constants –––––––––––––––––––––––––––––––––––––
-PROCESSED_DATA_PATH = Path("../data/processed/loans_featured.csv")
-MODEL_OUTPUT_PATH = Path("../models/rf_loan_default.pkl")
+PROCESSED_DATA_PATH = Path(__file__).resolve().parents[3] / "../data/processed/loans_featured.csv"
+MODEL_OUTPUT_PATH = Path(__file__).resolve().parents[3] / "../models/rf_loan_default.pkl"
+# TODO resolve().parents[3] is a temporary fix to guide to docs
 
 # –– Step 1: Load processed data –––––––––––––––––––
 def load_processed_data(path=PROCESSED_DATA_PATH) -> pd.DataFrame:
