@@ -12,13 +12,15 @@ LEAKAGE_COLS = [
 DEFAULT_STATUSES = [
     "Charged Off",
     "Late (31-120 days)",
-    "Late (16-30 days)"
+    "Late (16-30 days)",
+    "In Grace Period"
 ]
 
 KEEP_STATUSES = [
     "Charged Off",
     "Late (31-120 days)",
     "Late (16-30 days)",
+    "In Grace Period",
     "Fully Paid"
 ]
 
@@ -34,20 +36,23 @@ MONTHS_SINCE_COLS = [
     "months_since_last_credit_inquiry"
 ]
 
+
 # -- Step 1: Drop leakage columns -----------------
 def drop_leakage_cols(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop(columns=LEAKAGE_COLS, errors="ignore")
 
+
 # -- Step 2: Encode target label ------------------
 def encode_target(df: pd.DataFrame) -> pd.DataFrame:
     df["default"] = df["loan_status"].isin(DEFAULT_STATUSES).astype(int)
-    # binary bool testing if loan_status is deemed default
     return df
+
 
 # -- Step 3: Filter ambiguous rows ----------------
 def filter_ambiguous(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["loan_status"].isin(KEEP_STATUSES)]
     return df.drop(columns=["loan_status"])
+
 
 # -- Step 4: Handle joint application nulls -------
 def handle_joint_nulls(df: pd.DataFrame) -> pd.DataFrame:
@@ -56,18 +61,31 @@ def handle_joint_nulls(df: pd.DataFrame) -> pd.DataFrame:
         df[c] = df[c].fillna(0)
     return df
 
-# -- Step 5: Handle deliquency nulls --------------
+
+# -- Step 5: Handle delinquency nulls -------------
 def handle_delinq_nulls(df: pd.DataFrame) -> pd.DataFrame:
     # Capture meaning of null BEFORE filling
     df["ever_delinquent"] = df["months_since_last_delinq"].notna().astype(int)
     df["ever_90d_late"] = df["months_since_90d_late"].notna().astype(int)
-    
+
     # Sentinel fill - null means "never happened"
     for c in MONTHS_SINCE_COLS:
         df[c] = df[c].fillna(999)
     return df
 
-# -- Step 6: Encode catigorical columns -----------
+
+# -- Step 6: Engineer ratio features -------------
+def engineer_ratio_features(df: pd.DataFrame) -> pd.DataFrame:
+    # Replace zero income with NaN to avoid divide-by-zero, then median-fill
+    income = df["annual_income"].replace(0, pd.NA)
+    df["loan_income_ratio"] = df["loan_amount"] / income
+    df["loan_income_ratio"] = df["loan_income_ratio"].fillna(
+        df["loan_income_ratio"].median()
+    )
+    return df
+
+
+# -- Step 7: Encode categorical columns -----------
 def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     # Ordinal - grade has natural order A=best, G=worst
     grade_map = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6, "G": 7}
@@ -89,14 +107,19 @@ def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     drop_cols = ["emp_title", "sub_grade", "issue_month", "state"]
     df = df.drop(columns=drop_cols, errors="ignore")
 
-    # Handlo remianing nulls with median imputation
+    # Handle remaining nulls with median imputation
     df["emp_length"] = df["emp_length"].fillna(df["emp_length"].median())
-    df["debt_to_income"] = df["debt_to_income"].fillna(df["debt_to_income"].median())
-    df["num_accounts_120d_past_due"] = df["num_accounts_120d_past_due"].fillna(0)
+    df["debt_to_income"] = df["debt_to_income"].fillna(
+        df["debt_to_income"].median()
+    )
+    df["num_accounts_120d_past_due"] = df[
+        "num_accounts_120d_past_due"
+    ].fillna(0)
 
     return df
 
-# —— Master orchestrator —————————————————————————
+
+# -- Master orchestrator --------------------------
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()  # never mutate the raw DataFrame
     df = drop_leakage_cols(df)
@@ -104,5 +127,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df = filter_ambiguous(df)
     df = handle_joint_nulls(df)
     df = handle_delinq_nulls(df)
+    df = engineer_ratio_features(df)
     df = encode_categoricals(df)
     return df

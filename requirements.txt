@@ -7,3 +7,5 @@ fastapi
 uvicorn
 great-expectations
 pydantic
+flake8
+pytest
