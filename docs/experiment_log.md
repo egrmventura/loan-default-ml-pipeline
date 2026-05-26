@@ -107,3 +107,101 @@ Actual Default              33                     3
 **Conclusion:** Feature did not improve performance — all metrics declined slightly. With 625 rows, the Random Forest lacks the sample density to exploit a new continuous feature reliably. The signal may be real but the dataset is too small to surface it. Feature kept in the pipeline (domain-valid); failure is a data volume problem, not a feature logic problem.
 
 **Next step:** Try XGBoost with the same feature set — gradient boosting handles small tabular datasets better than Random Forest and may extract more signal from `loan_income_ratio`.
+
+---
+
+## Experiment 5 — XGBoost + New Engineered Features
+
+**Date:** 2026-05-22
+
+**Change from Experiment 4:** Added three engineered features to `engineer_ratio_features()`:
+- `installment_to_income` = `installment / annual_income`
+- `credit_utilization_rate` = `total_credit_utilized / total_credit_limit`
+- `credit_age` = `2024 - earliest_credit_line`
+
+**Model:** Same XGBClassifier as Experiment 4. Feature count: 65 (vs 62).
+
+**Results:**
+- AUC-ROC: 0.6092 (vs 0.6217 Exp 4)
+- Precision (Default class): 0.35 (vs 0.41)
+- Recall (Default class): 0.33 (vs 0.33)
+- F1 (Default class): 0.34 (vs 0.37)
+
+**Confusion matrix (test set, n=125):**
+```
+                      Predicted Not Default  Predicted Default
+Actual Not Default          67                    22
+Actual Default              24                    12
+```
+
+**Conclusion:** New features did not improve performance — AUC-ROC and F1 declined slightly while recall held flat at 0.33. The model caught the same 12 defaults but generated more false positives (22 vs 17). The features are domain-valid and kept in the pipeline. The pattern across Experiments 3–5 is consistent: adding features to a 625-row dataset with XGBoost produces marginal or negative returns. The bottleneck is data volume, not feature set breadth. Next focus should be either hyperparameter tuning on the current feature set or investigating whether the dataset can be expanded.
+
+---
+
+## Experiment 6 — XGBoost Hyperparameter Tuning
+
+**Date:** 2026-05-22
+
+**Method:** `RandomizedSearchCV` — 50 iterations, 5-fold stratified CV, scoring=`roc_auc`.
+
+**Search space:**
+```
+n_estimators      : [100, 200, 300, 500]
+max_depth         : [3, 4, 5, 6]
+learning_rate     : [0.01, 0.05, 0.1, 0.2]
+subsample         : [0.7, 0.8, 1.0]
+colsample_bytree  : [0.7, 0.8, 1.0]
+min_child_weight  : [1, 3, 5]
+```
+
+**Best params found:**
+```
+n_estimators=100, max_depth=4, learning_rate=0.2,
+subsample=0.8, colsample_bytree=1.0, min_child_weight=3
+```
+
+**Best CV AUC-ROC:** 0.6810 (cross-validated on train set)
+
+**Test set results:**
+- AUC-ROC: 0.6092 (vs 0.6092 Exp 5 — identical)
+- Precision (Default class): 0.39 (vs 0.35)
+- Recall (Default class): 0.33 (vs 0.33)
+- F1 (Default class): 0.36 (vs 0.34)
+
+**Confusion matrix (test set, n=125):**
+```
+                      Predicted Not Default  Predicted Default
+Actual Not Default          70                    19
+Actual Default              24                    12
+```
+
+**Conclusion:** CV AUC-ROC improved meaningfully (0.62 → 0.68), but test set performance is unchanged — same 12 defaults caught, AUC-ROC identical at 0.6092. The gap between CV score (0.68) and test score (0.61) indicates overfitting to the small training set even with regularization. Tuning has extracted what's available from this dataset. The ceiling has been reached with this data volume and approach.
+
+**Key takeaway across all 6 experiments:** Every technique applied — filter changes, feature engineering, model selection, hyperparameter tuning — has produced marginal movement on test metrics. The hard constraint is 625 rows with 178 defaults. No modeling technique overcomes insufficient data. The next meaningful step is either sourcing a larger dataset or implementing cross-validated evaluation as the primary metric rather than a fixed holdout.
+
+---
+
+## Experiment 4 — XGBoost Baseline
+
+**Date:** 2026-05-22
+
+**Change from Experiment 3:** Swapped RandomForest for XGBClassifier. `scale_pos_weight = neg/pos (~2.5)` replaces `class_weight="balanced"` for imbalance handling.
+
+**Model:** `XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.1, scale_pos_weight=2.5, random_state=42)`
+
+**Feature set:** Same 62 features including `loan_income_ratio`. Artifact saved to `models/xgb_loan_default.pkl`.
+
+**Results:**
+- AUC-ROC: 0.6217 (vs 0.6072 RF Exp 3)
+- Precision (Default class): 0.41 (vs 0.43)
+- Recall (Default class): 0.33 (vs 0.08)
+- F1 (Default class): 0.37 (vs 0.14)
+
+**Confusion matrix (test set, n=125):**
+```
+                      Predicted Not Default  Predicted Default
+Actual Not Default          72                    17
+Actual Default              24                    12
+```
+
+**Conclusion:** XGBoost is the best model so far on the metric that matters most — recall on the Default class jumped from 0.08 to 0.33, catching 12 of 36 defaults vs 3 with RF. F1 nearly tripled (0.14 → 0.37). The tradeoff is more false positives (17 non-defaults flagged as default vs 4), which is an acceptable cost in a default prediction context where missing a real default is more expensive than a false alarm. AUC-ROC is comparable to RF (0.62 vs 0.61). XGBoost is now the working model. Next focus: feature engineering to push recall higher.

@@ -73,6 +73,34 @@ Each entry should answer: what is it, why does it matter for default prediction,
 
 ---
 
+## installment_to_income — Engineered Ratio Feature
+
+**Formula:** `installment / annual_income`
+
+**Why:** Captures monthly payment burden as a fraction of annual income — more precise than `loan_income_ratio` because it reflects actual cash flow pressure rather than total debt size. A borrower spending 20% of their income on a single loan payment is at higher risk than one spending 2%.
+
+**Zero-income handling:** Same guard as `loan_income_ratio` — zero incomes replaced with NaN before division, then median-filled.
+
+---
+
+## credit_utilization_rate — Engineered Ratio Feature
+
+**Formula:** `total_credit_utilized / total_credit_limit`
+
+**Why:** The raw amounts (`total_credit_utilized`, `total_credit_limit`) are already in the pipeline but the *ratio* captures something different. A borrower at 90% utilization is riskier than one at 15%, regardless of absolute dollar amounts. High utilization signals financial stress.
+
+**Zero-limit handling:** Zero total credit limit replaced with NaN before division, then median-filled.
+
+---
+
+## credit_age — Engineered Feature
+
+**Formula:** `2024 - earliest_credit_line`
+
+**Why:** Length of credit history is a standard credit risk signal — longer history means more data points on borrower behavior and generally lower risk. Shorter history means less track record.
+
+---
+
 ## loan_income_ratio — Engineered Ratio Feature
 
 **Formula:** `loan_amount / annual_income`
