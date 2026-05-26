@@ -74,14 +74,32 @@ def handle_delinq_nulls(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# -- Step 6: Engineer ratio features -------------
+# -- Step 6: Engineer derived features -----------
 def engineer_ratio_features(df: pd.DataFrame) -> pd.DataFrame:
-    # Replace zero income with NaN to avoid divide-by-zero, then median-fill
     income = df["annual_income"].replace(0, pd.NA)
+
+    # loan amount relative to annual income
     df["loan_income_ratio"] = df["loan_amount"] / income
     df["loan_income_ratio"] = df["loan_income_ratio"].fillna(
         df["loan_income_ratio"].median()
     )
+
+    # monthly payment burden as fraction of annual income
+    df["installment_to_income"] = df["installment"] / income
+    df["installment_to_income"] = df["installment_to_income"].fillna(
+        df["installment_to_income"].median()
+    )
+
+    # fraction of available credit currently used
+    credit_limit = df["total_credit_limit"].replace(0, pd.NA)
+    df["credit_utilization_rate"] = df["total_credit_utilized"] / credit_limit
+    df["credit_utilization_rate"] = df["credit_utilization_rate"].fillna(
+        df["credit_utilization_rate"].median()
+    )
+
+    # years since first credit line opened (proxy for credit history length)
+    df["credit_age"] = 2024 - df["earliest_credit_line"]
+
     return df
 
 
