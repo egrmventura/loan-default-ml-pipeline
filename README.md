@@ -1,36 +1,106 @@
 # Loan Default Prediction ML Pipeline
 
 ## Overview
-End-to-end ML pipeline exercise for predicting loan default risk with data engineering, feature pipelines, and model deployment.
+End-to-end ML pipeline for predicting loan default risk, demonstrating production-style data engineering, feature pipelines, and model deployment practices.
 
-Key formula on case-by-case:<br>
-#### EL = PD x LGD x EAD<br>
+Key formula: **EL = PD × LGD × EAD**
 
-- EL = Expected Loss
-- PD = Probablity of Default — Probability the borrower will default within a time horizon (usually 12 months)
-- LGD = Loss Given Default — Percentage of loan lost if default occurs
-- EAD = Exposure at Default — How much mone is owed when default occurs
+- **PD** = Probability of Default — probability the borrower will default within a time horizon (usually 12 months)
+- **LGD** = Loss Given Default — percentage of loan lost if default occurs
+- **EAD** = Exposure at Default — how much is owed when default occurs
 
-## Architecture
-Data → Feature Engineering → Model Training → API → Monitoring
+This pipeline predicts PD.
+
+---
 
 ## Stack
-Python<br>
-Pandas<br>
-XGBoost<br>
-MLflow<br>
-Airflow<br>
-FastAPI<br>
-Docker<br>
+Python · Pandas · XGBoost · scikit-learn · MLflow · FastAPI · Docker
 
-## Dataset
-LendingClub dataset gathered from OpenIntro resource at:
-https://www.openintro.org/data/index.php?data=loans_full_schema
+---
 
-## Pipeline
-1. Data Ingestion
-2. Data Validation
-3. Feature Engineering
-4. Model Training
-5. Model Evaluation
-6. Model Deployment
+## Data Setup
+
+**Data files are not committed to this repo** (raw files exceed GitHub's size limits). You must download and build locally.
+
+### Small dataset (OpenIntro — 10k rows, for development)
+Download from [OpenIntro](https://www.openintro.org/data/index.php?data=loans_full_schema) and place at:
+```
+data/raw/loans_full_schema.csv
+```
+
+Then rebuild processed data:
+```bash
+source venv/bin/activate
+python -c "
+from loan_default_ml_pipeline.ingestion.load_data import load_raw_data
+from loan_default_ml_pipeline.features.build_features import build_features
+df = build_features(load_raw_data())
+df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyarrow')
+"
+```
+
+### Large dataset (LendingClub full — 2.2M rows, for training)
+Requires [Kaggle CLI](https://github.com/Kaggle/kaggle-api) and a Kaggle account:
+```bash
+pip install kaggle
+# Place kaggle.json at ~/.kaggle/kaggle.json (chmod 600)
+kaggle datasets download wordsforthewise/lending-club \
+  -f accepted_2007_to_2018Q4.csv.gz -p data/raw/ --force
+cd data/raw && gunzip -k accepted_2007_to_2018Q4.csv.gz
+```
+
+Then rebuild processed data:
+```bash
+source venv/bin/activate
+python -c "
+from loan_default_ml_pipeline.ingestion.load_data import load_large_data
+from loan_default_ml_pipeline.features.build_features import build_features
+df = build_features(load_large_data())
+df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyarrow')
+"
+```
+
+---
+
+## Quickstart
+
+```bash
+make setup       # create venv and install dependencies
+pip install -e . # editable install for package-style imports
+make train       # train Random Forest model
+make lint        # flake8 src/
+make test        # pytest tests/
+```
+
+---
+
+## Architecture
+```
+data/raw/
+  → ingestion       (load_raw_data / load_large_data)
+  → features        (build_features — 8-step pipeline)
+  → data/processed/loans_featured.parquet
+  → training        (RF or XGBoost → models/*.pkl)
+  → evaluation      (AUC-ROC, classification report, confusion matrix)
+  → inference/API   (in progress)
+```
+
+---
+
+## Experiment Results
+
+| Exp | Dataset | Model | AUC-ROC | Recall (Default) |
+|---|---|---|---|---|
+| 1–3 | 625 rows | Random Forest variants | 0.61–0.63 | 0.05–0.14 |
+| 4–6 | 625 rows | XGBoost + tuning | 0.61 | 0.33 |
+| 7 | 1.38M rows | XGBoost | **0.73** | **0.68** |
+
+Data volume was the primary constraint. Moving to the full LendingClub dataset broke the modeling ceiling.
+
+---
+
+## Docs
+- `docs/feature_log.md` — feature decisions and rationale
+- `docs/experiment_log.md` — full experiment history with metrics
+- `docs/data_notes.md` — dataset observations and format decisions
+- `docs/handoff/` — session handoff notes
