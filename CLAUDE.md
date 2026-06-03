@@ -14,6 +14,38 @@ Business formula: `EL = PD × LGD × EAD` — this pipeline predicts PD.
 
 ---
 
+## Data Setup
+
+**Data files are not in the repo** — excluded via `.gitignore` (raw files exceed GitHub's 100MB limit). Must be downloaded and built locally before running anything.
+
+**Small dataset** (OpenIntro, 10k rows — for development/testing):
+```bash
+# Download loans_full_schema.csv from openintro.org and place at data/raw/
+venv/bin/python -c "
+from loan_default_ml_pipeline.ingestion.load_data import load_raw_data
+from loan_default_ml_pipeline.features.build_features import build_features
+df = build_features(load_raw_data())
+df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyarrow')
+"
+```
+
+**Large dataset** (LendingClub full, 2.2M rows — for real training):
+```bash
+# Requires ~/.kaggle/kaggle.json with valid credentials
+kaggle datasets download wordsforthewise/lending-club \
+  -f accepted_2007_to_2018Q4.csv.gz -p data/raw/ --force
+cd data/raw && gunzip -k accepted_2007_to_2018Q4.csv.gz
+venv/bin/python -c "
+from loan_default_ml_pipeline.ingestion.load_data import load_large_data
+from loan_default_ml_pipeline.features.build_features import build_features
+df = build_features(load_large_data())
+df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyarrow')
+"
+```
+Processing takes ~55s. Output: `data/processed/loans_featured.parquet` (75MB, 1.38M rows).
+
+---
+
 ## Commands
 
 ```bash
@@ -78,7 +110,8 @@ Steps run in order:
 6. Engineer ratio features — `loan_income_ratio`, `installment_to_income`, `credit_utilization_rate`, `credit_age`
 7. Encode categoricals — ordinal grade (A=1…G=7), one-hot nominal cols, drop high-cardinality cols
 
-Output: 625 rows × 66 columns (after filtering ambiguous statuses from 10k raw rows).
+Output (small dataset): 625 rows × 66 cols. Output (large dataset): 1,382,351 rows × 73 cols.
+Step 8 (`impute_remaining_nulls`) handles sparse bureau fields in pre-2012 LendingClub records.
 
 ### Models
 
@@ -95,29 +128,29 @@ XGBoost is the current best model. Training functions:
 
 ## Experiment Summary
 
-| Exp | Change | Test AUC-ROC | Recall (Default) | F1 (Default) |
-|---|---|---|---|---|
-| 1 | RF baseline (558 rows) | 0.6298 | 0.05 | 0.08 |
-| 2 | +In Grace Period (625 rows) | 0.6309 | 0.14 | 0.22 |
-| 3 | +loan_income_ratio | 0.6072 | 0.08 | 0.14 |
-| 4 | XGBoost | 0.6217 | 0.33 | 0.37 |
-| 5 | +3 ratio features | 0.6092 | 0.33 | 0.34 |
-| 6 | Hyperparameter tuning | 0.6092 | 0.33 | 0.36 |
+| Exp | Dataset | Change | AUC-ROC | Recall | F1 |
+|---|---|---|---|---|---|
+| 1 | 558 rows | RF baseline | 0.6298 | 0.05 | 0.08 |
+| 2 | 625 rows | +In Grace Period | 0.6309 | 0.14 | 0.22 |
+| 3 | 625 rows | +loan_income_ratio | 0.6072 | 0.08 | 0.14 |
+| 4 | 625 rows | XGBoost | 0.6217 | 0.33 | 0.37 |
+| 5 | 625 rows | +3 ratio features | 0.6092 | 0.33 | 0.34 |
+| 6 | 625 rows | Hyperparameter tuning | 0.6092 | 0.33 | 0.36 |
+| **7** | **1.38M rows** | **XGBoost, large dataset** | **0.7305** | **0.68** | **0.47** |
 
-**Current ceiling:** Test AUC-ROC ~0.61, recall ~0.33. Dataset size (625 rows) is the hard constraint — every modeling technique has been applied with marginal returns. Next meaningful step is the LendingClub full dataset (~2.2M rows).
+Data volume was the hard constraint. Moving to the full LendingClub dataset broke the ceiling — AUC-ROC crossed 0.73, recall more than doubled. Full results in `docs/experiment_log.md`.
 
 ---
 
 ## Known Gaps (priority order)
 
-1. **Larger dataset** — 625 usable rows is the primary modeling bottleneck
-2. **Validation layer** — `data_quality.py` has only `null_summary`; schema enforcement, range checks, duplicate detection missing
-3. **Pipeline orchestrator** — `pipelines/data_pipeline.py` + `make data` target not yet built
-4. **Inference endpoint** — `inference/predict.py` is a stub
-5. **MLflow tracking** — not yet integrated
-6. **FutureWarnings** — `.fillna()` on object-dtype cols in `handle_joint_nulls` / `handle_delinq_nulls`; fix with explicit `.astype(float)` cast before fill
-7. **Pinned dependencies** — `requirements.txt` has no versions
-8. **Docker, CI/CD, monitoring** — not yet started
+1. **Validation layer** — `data_quality.py` has only `null_summary`; schema enforcement, range checks, duplicate detection missing
+2. **Pipeline orchestrator** — `pipelines/data_pipeline.py` + `make data` target not yet built
+3. **Inference endpoint** — `inference/predict.py` is a stub
+4. **MLflow tracking** — not yet integrated
+5. **FutureWarnings** — `.fillna()` on object-dtype cols in `handle_joint_nulls` / `handle_delinq_nulls`; fix with explicit `.astype(float)` cast before fill
+6. **Pinned dependencies** — `requirements.txt` has no versions
+7. **Docker, CI/CD, monitoring** — not yet started
 
 ---
 
