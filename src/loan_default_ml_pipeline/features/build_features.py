@@ -13,7 +13,9 @@ DEFAULT_STATUSES = [
     "Charged Off",
     "Late (31-120 days)",
     "Late (16-30 days)",
-    "In Grace Period"
+    "In Grace Period",
+    "Default",
+    "Does not meet the credit policy. Status:Charged Off"
 ]
 
 KEEP_STATUSES = [
@@ -21,7 +23,10 @@ KEEP_STATUSES = [
     "Late (31-120 days)",
     "Late (16-30 days)",
     "In Grace Period",
-    "Fully Paid"
+    "Default",
+    "Does not meet the credit policy. Status:Charged Off",
+    "Fully Paid",
+    "Does not meet the credit policy. Status:Fully Paid"
 ]
 
 JOINT_COLUMNS_INT = [
@@ -137,6 +142,22 @@ def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# -- Step 8: Final null imputation ----------------
+def impute_remaining_nulls(df: pd.DataFrame) -> pd.DataFrame:
+    # Percent/ratio columns — fill with median
+    pct_cols = ["account_never_delinq_percent", "credit_utilization_rate"]
+    for c in pct_cols:
+        if c in df.columns:
+            df[c] = df[c].fillna(df[c].median())
+
+    # All remaining numeric nulls are count/flag columns where
+    # null means the record predates that bureau field — treat as 0
+    num_cols = df.select_dtypes(include="number").columns
+    df[num_cols] = df[num_cols].fillna(0)
+
+    return df
+
+
 # -- Master orchestrator --------------------------
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()  # never mutate the raw DataFrame
@@ -147,4 +168,5 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df = handle_delinq_nulls(df)
     df = engineer_ratio_features(df)
     df = encode_categoricals(df)
+    df = impute_remaining_nulls(df)
     return df

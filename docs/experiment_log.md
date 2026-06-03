@@ -181,6 +181,40 @@ Actual Default              24                    12
 
 ---
 
+## Experiment 7 — XGBoost on LendingClub Full Dataset (2.2M rows)
+
+**Date:** 2026-05-26
+
+**Branch:** `feature/large-dataset-test`
+
+**Change:** Replaced OpenIntro dataset (10k rows, 558–625 usable) with LendingClub full historical dataset (2.26M rows, 1.38M usable after filtering). Pipeline extended with:
+- `normalize_schema()` in `load_data.py` — maps 50+ Kaggle column names to pipeline-expected names, coerces `term`, `earliest_credit_line`, `emp_length`
+- `PIPELINE_COLS` selection — drops ~100 unmapped Kaggle columns before feature engineering
+- `impute_remaining_nulls()` — final step in `build_features` handling sparse bureau fields in pre-2012 records (fill 0 for count cols, median for ratio cols)
+- `fico_score` added as new feature (average of `fico_range_high` / `fico_range_low`)
+- Two new `loan_status` values handled: `"Default"` and `"Does not meet the credit policy. Status:Charged Off"` → default=1
+
+**Dataset:** 1,382,351 rows — 303,612 defaults (22.0%) / 1,078,739 non-defaults. Test set: 276,471 rows.
+
+**Model:** Same XGBoost defaults as Experiment 4 (`n_estimators=200, max_depth=4, learning_rate=0.1, scale_pos_weight=neg/pos`). Training time: 5.6s.
+
+**Results:**
+- AUC-ROC: **0.7305** (vs 0.6092 best on small dataset — +12 points)
+- Precision (Default class): 0.36
+- Recall (Default class): **0.68** (vs 0.33 best on small dataset)
+- F1 (Default class): **0.47** (vs 0.37 best on small dataset)
+
+**Confusion matrix (test set, n=276,471):**
+```
+                      Predicted Not Default  Predicted Default
+Actual Not Default       141,773               73,975
+Actual Default            19,474               41,249
+```
+
+**Conclusion:** Data volume was the constraint all along. AUC-ROC crossed 0.73, recall on defaults more than doubled (0.33 → 0.68), F1 went from 0.37 → 0.47. The model now catches 68% of actual defaults — a usable signal. False positives are high (74k non-defaults flagged) but that is the expected cost of high recall on a 22% minority class. Merge criteria from `data_notes.md` (AUC-ROC > 0.70, recall > 0.40) are both met. Branch is ready to merge.
+
+---
+
 ## Experiment 4 — XGBoost Baseline
 
 **Date:** 2026-05-22

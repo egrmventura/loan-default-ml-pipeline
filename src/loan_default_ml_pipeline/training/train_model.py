@@ -8,7 +8,8 @@ import joblib
 
 # -- Constants ------------------------------------
 PROCESSED_DATA_PATH = (
-    Path(__file__).resolve().parents[3] / "data/processed/loans_featured.csv"
+    Path(__file__).resolve().parents[3]
+    / "data/processed/loans_featured.parquet"
 )
 RF_MODEL_PATH = (
     Path(__file__).resolve().parents[3] / "models/rf_loan_default.pkl"
@@ -20,7 +21,7 @@ XGB_MODEL_PATH = (
 
 # -- Step 1: Load processed data ------------------
 def load_processed_data(path=PROCESSED_DATA_PATH) -> pd.DataFrame:
-    df = pd.read_csv(path)
+    df = pd.read_parquet(path)
     assert "default" in df.columns, "Target column 'default' missing"
     assert df.isnull().sum().sum() == 0, "Nulls detected in processed data"
     return df
