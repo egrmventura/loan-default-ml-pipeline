@@ -154,6 +154,19 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 
 ---
 
+## Agents
+
+10 agents available in `.claude/agents/`. Full index, trigger conditions, and recommended sequences: `.claude/agents/CLAUDE.md`.
+
+Quick reference — most common:
+- `ml-tester` — lint + tests + smoke test (run before every commit)
+- `pr-ready` — full pre-PR checklist
+- `data-validator` — validate parquet before training
+- `pipeline-rerun` — full experiment orchestration
+- `session-handoff` — end-of-session handoff doc
+
+---
+
 ## Development Workflow
 
 **Notebook → Discover → Document → Implement → Commit**
