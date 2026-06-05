@@ -29,10 +29,13 @@ KEEP_STATUSES = [
     "Does not meet the credit policy. Status:Fully Paid"
 ]
 
-JOINT_COLUMNS_INT = [
+JOINT_NUMERIC_COLS = [
     "annual_income_joint",
     "debt_to_income_joint",
-    "verification_income_joint"
+]
+
+JOINT_CATEGORICAL_COLS = [
+    "verification_income_joint",
 ]
 
 MONTHS_SINCE_COLS = [
@@ -62,8 +65,10 @@ def filter_ambiguous(df: pd.DataFrame) -> pd.DataFrame:
 # -- Step 4: Handle joint application nulls -------
 def handle_joint_nulls(df: pd.DataFrame) -> pd.DataFrame:
     df["is_joint_app"] = (df["application_type"] == "joint").astype(int)
-    for c in JOINT_COLUMNS_INT:
-        df[c] = df[c].fillna(0)
+    for c in JOINT_NUMERIC_COLS:
+        df[c] = df[c].astype(float).fillna(0)
+    for c in JOINT_CATEGORICAL_COLS:
+        df[c] = df[c].fillna("Not Applicable")
     return df
 
 
@@ -75,13 +80,14 @@ def handle_delinq_nulls(df: pd.DataFrame) -> pd.DataFrame:
 
     # Sentinel fill - null means "never happened"
     for c in MONTHS_SINCE_COLS:
-        df[c] = df[c].fillna(999)
+        df[c] = df[c].astype(float).fillna(999)
     return df
 
 
 # -- Step 6: Engineer derived features -----------
 def engineer_ratio_features(df: pd.DataFrame) -> pd.DataFrame:
-    income = df["annual_income"].replace(0, pd.NA)
+    nan = float("nan")
+    income = df["annual_income"].replace(0, nan)
 
     # loan amount relative to annual income
     df["loan_income_ratio"] = df["loan_amount"] / income
@@ -96,7 +102,7 @@ def engineer_ratio_features(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # fraction of available credit currently used
-    credit_limit = df["total_credit_limit"].replace(0, pd.NA)
+    credit_limit = df["total_credit_limit"].replace(0, nan)
     df["credit_utilization_rate"] = df["total_credit_utilized"] / credit_limit
     df["credit_utilization_rate"] = df["credit_utilization_rate"].fillna(
         df["credit_utilization_rate"].median()
