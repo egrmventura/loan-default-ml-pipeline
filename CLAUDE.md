@@ -73,13 +73,17 @@ from loan_default_ml_pipeline.features.build_features import build_features
 **Data flow:**
 ```
 data/raw/loans_full_schema.csv
-  → ingestion       (load_raw_data — CSV only, no profiling)
-  → features        (build_features — 7-step pipeline)
+  → ingestion       (load_raw_data / load_large_data)
+  → features        (build_features — 8-step pipeline)
+  → validation      (run_validation — GO/NO-GO before saving)
   → data/processed/loans_featured.parquet
   → training        (RF or XGBoost → models/*.pkl)
   → evaluation      (classification report, AUC-ROC, confusion matrix)
-  → inference/API   (stub — not yet implemented)
+  → inference/API   (GET /health, POST /predict — FastAPI)
 ```
+
+Run the full data pipeline: `make data` (small) or `make data-large` (1.38M rows).
+Start the API: `make run-api` → `http://localhost:8000`
 
 **Processed format is parquet** (pyarrow engine) — not CSV. Rebuild with:
 ```python
@@ -95,9 +99,10 @@ df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyar
 | `features/build_features.py` | Done | `build_features(df)` — full 7-step pipeline |
 | `training/train_model.py` | Done | RF + XGBoost training + hyperparameter tuning |
 | `validation/validate_model.py` | Done | Post-training eval: classification report, AUC-ROC, confusion matrix |
-| `validation/data_quality.py` | Partial | `null_summary(df)` only |
-| `inference/predict.py` | Stub | Empty |
-| `pipelines/data_pipeline.py` | Missing | End-to-end orchestrator not yet built |
+| `validation/data_quality.py` | Done | 6 checks + `run_validation()` with GO/NO-GO |
+| `inference/predict.py` | Done | Feature transformation + XGBoost prediction |
+| `inference/api.py` | Done | FastAPI — `GET /health`, `POST /predict` |
+| `pipelines/data_pipeline.py` | Done | `run_data_pipeline(mode, validate)` — end-to-end |
 
 ### Feature engineering pipeline (`build_features.py`)
 
@@ -144,13 +149,9 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 
 ## Known Gaps (priority order)
 
-1. **Validation layer** — `data_quality.py` has only `null_summary`; schema enforcement, range checks, duplicate detection missing
-2. **Pipeline orchestrator** — `pipelines/data_pipeline.py` + `make data` target not yet built
-3. **Inference endpoint** — `inference/predict.py` is a stub
-4. **MLflow tracking** — not yet integrated
-5. **FutureWarnings** — `.fillna()` on object-dtype cols in `handle_joint_nulls` / `handle_delinq_nulls`; fix with explicit `.astype(float)` cast before fill
-6. **Pinned dependencies** — `requirements.txt` has no versions
-7. **Docker, CI/CD, monitoring** — not yet started
+1. **MLflow tracking** — not yet integrated into training
+2. **Pinned dependencies** — `requirements.txt` has no versions
+3. **Docker, CI/CD, monitoring** — not yet started
 
 ---
 
@@ -174,4 +175,6 @@ Quick reference — most common:
 - `docs/feature_log.md` — log every feature decision with rationale
 - `docs/experiment_log.md` — log every model run with metrics and conclusion
 - `docs/data_notes.md` — log dataset observations and format decisions
-- `tests/test_features.py` — 18 tests, all passing; update fixture (`make_minimal_df`) when adding source columns to the pipeline
+- `tests/test_features.py` — 18 tests; update fixture (`make_minimal_df`) when adding source columns to the pipeline
+- `tests/test_validation.py` — 33 tests covering all validation checks
+- Total: 51 tests, all passing
