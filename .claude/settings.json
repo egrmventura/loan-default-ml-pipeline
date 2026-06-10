@@ -1,44 +1,30 @@
 {
   "permissions": {
     "allow": [
-      // Reading files and folders
       "Bash(cat:*)",
       "Bash(ls:*)",
-
-      // Running dev server, tests, formatting
       "Bash(npm run *)",
-
-      // Git operations
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-
-      // Reading, Editing and Writing files
       "Read(*)",
       "Edit(*)",
       "Write(*)"
     ],
     "deny": [
-      // Installing packages
       "Bash(npm install *)",
       "Bash(npm uninstall *)",
       "Bash(yarn add *)",
       "Bash(pip install *)",
-
-      // Deleting files or folders
       "Bash(rm *)",
       "Bash(rm -rf *)",
       "Bash(rmdir *)",
-
-      // Anything that touches the internet
       "Bash(curl *)",
       "Bash(wget *)",
       "Bash(ssh *)",
       "Bash(scp *)",
-
-      // Sensitive files and secrets
       "Read(.env)",
       "Read(.env.*)",
       "Read(**/secrets/*)",
