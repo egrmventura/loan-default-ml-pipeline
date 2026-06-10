@@ -151,7 +151,7 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 ## Known Gaps (priority order)
 
 1. **Pinned dependencies** — `requirements.txt` has no versions (only `mlflow` is pinned so far)
-2. **Docker, CI/CD, monitoring** — not yet started
+2. **Docker, CI/CD, monitoring** — not yet started <!-- DockerResume: pick up here next -->
 
 ---
 
