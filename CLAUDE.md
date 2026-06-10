@@ -55,6 +55,7 @@ pip install -e .           # Editable install (enables package-style imports)
 make ingestion_demo        # Run data ingestion
 make train                 # Train RF model
 make run-api               # Start FastAPI inference server
+make mlflow-ui             # Launch MLflow tracking UI (mlruns/)
 make lint                  # flake8 src/
 make test                  # pytest tests/
 ```
@@ -97,7 +98,7 @@ df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyar
 |---|---|---|
 | `ingestion/load_data.py` | Done | `load_raw_data()` |
 | `features/build_features.py` | Done | `build_features(df)` — full 7-step pipeline |
-| `training/train_model.py` | Done | RF + XGBoost training + hyperparameter tuning |
+| `training/train_model.py` | Done | RF + XGBoost training + hyperparameter tuning; XGBoost runs are tracked with MLflow (params, metrics, model artifact) |
 | `validation/validate_model.py` | Done | Post-training eval: classification report, AUC-ROC, confusion matrix |
 | `validation/data_quality.py` | Done | 6 checks + `run_validation()` with GO/NO-GO |
 | `inference/predict.py` | Done | Feature transformation + XGBoost prediction |
@@ -149,9 +150,8 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 
 ## Known Gaps (priority order)
 
-1. **MLflow tracking** — not yet integrated into training
-2. **Pinned dependencies** — `requirements.txt` has no versions
-3. **Docker, CI/CD, monitoring** — not yet started
+1. **Pinned dependencies** — `requirements.txt` has no versions (only `mlflow` is pinned so far)
+2. **Docker, CI/CD, monitoring** — not yet started
 
 ---
 

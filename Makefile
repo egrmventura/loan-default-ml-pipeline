@@ -1,4 +1,4 @@
-.PHONY: setup data data-large train run-api lint test ingestion_demo
+.PHONY: setup data data-large train run-api lint test ingestion_demo mlflow-ui
 
 setup:
 	python3 -m venv venv
@@ -16,6 +16,9 @@ train:
 
 run-api:
 	. venv/bin/activate && uvicorn loan_default_ml_pipeline.inference.api:app --reload
+
+mlflow-ui:
+	. venv/bin/activate && mlflow ui --backend-store-uri mlruns/
 
 lint:
 	. venv/bin/activate && flake8 src/
