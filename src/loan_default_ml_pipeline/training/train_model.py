@@ -3,8 +3,13 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import (
+    roc_auc_score, recall_score, precision_score, f1_score
+)
 from xgboost import XGBClassifier
 import joblib
+import mlflow
+import mlflow.xgboost
 
 # -- Constants ------------------------------------
 PROCESSED_DATA_PATH = (
@@ -107,9 +112,23 @@ def train_xgboost_model():
     print(f"Train default rate: {y_train.mean():.3f}")
     print(f"Test default rate: {y_test.mean():.3f}")
 
-    print("Training XGBoost....")
-    model = train_xgb(X_train, y_train)
-    print("Training complete.")
+    with mlflow.start_run():
+        print("Training XGBoost....")
+        model = train_xgb(X_train, y_train)
+        print("Training complete.")
+
+        mlflow.log_params(model.get_params())
+
+        y_pred = model.predict(X_test)
+        y_prob = model.predict_proba(X_test)[:, 1]
+        mlflow.log_metrics({
+            "auc_roc": roc_auc_score(y_test, y_prob),
+            "recall": recall_score(y_test, y_pred),
+            "precision": precision_score(y_test, y_pred),
+            "f1": f1_score(y_test, y_pred),
+        })
+
+        mlflow.xgboost.log_model(model, name="xgb_loan_default")
 
     save_model(model, XGB_MODEL_PATH)
     return model, X_test, y_test

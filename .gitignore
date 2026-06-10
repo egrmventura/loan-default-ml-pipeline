@@ -211,3 +211,7 @@ __marimo__/
 # Kaggle docs
 data/raw/
 data/processed/
+
+# MLflow local tracking store
+mlruns/
+mlflow.db
