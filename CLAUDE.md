@@ -158,7 +158,7 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 
 ## Known Gaps (priority order)
 
-1. **CI/CD, monitoring** — not yet started. Inference API is dockerized (`Dockerfile`, `make docker-build`/`make docker-run`); training/data pipeline is not yet containerized.
+1. **CD, monitoring** — CI is in place (`.github/workflows/ci.yml` runs lint + tests on push/PR to `main`). Inference API is dockerized (`Dockerfile`, `make docker-build`/`make docker-run`); training/data pipeline is not yet containerized. No automated deployment or model/data drift monitoring yet.
 
 ---
 
