@@ -65,12 +65,23 @@ df.to_parquet('data/processed/loans_featured.parquet', index=False, engine='pyar
 ## Quickstart
 
 ```bash
-make setup       # create venv and install dependencies
-pip install -e . # editable install for package-style imports
-make train       # train Random Forest model
-make lint        # flake8 src/
-make test        # pytest tests/
+make setup          # create venv and install dependencies
+pip install -e .    # editable install for package-style imports
+
+make data           # build processed dataset (small) — or make data-large
+make train          # train Random Forest model
+make run-api        # start FastAPI inference server on :8000
+make mlflow-ui      # browse MLflow experiment runs
+
+make docker-build   # build inference API image
+make docker-run     # serve the API in a container on :8000
+
+make lint           # flake8 src/
+make test           # pytest tests/
 ```
+
+XGBoost (the best-performing model) is trained via `train_xgboost_model()` and tracked
+with MLflow — see `src/loan_default_ml_pipeline/training/train_model.py`.
 
 ---
 
@@ -79,11 +90,14 @@ make test        # pytest tests/
 data/raw/
   → ingestion       (load_raw_data / load_large_data)
   → features        (build_features — 8-step pipeline)
+  → validation      (run_validation — GO/NO-GO before saving)
   → data/processed/loans_featured.parquet
-  → training        (RF or XGBoost → models/*.pkl)
+  → training        (RF or XGBoost → models/*.pkl, MLflow tracking)
   → evaluation      (AUC-ROC, classification report, confusion matrix)
-  → inference/API   (in progress)
+  → inference/API   (GET /health, POST /predict — FastAPI, dockerized)
 ```
+
+CI (`.github/workflows/ci.yml`) runs lint and the full test suite on every push/PR to `main`.
 
 ---
 
