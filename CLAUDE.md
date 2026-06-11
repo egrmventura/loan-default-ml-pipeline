@@ -56,6 +56,8 @@ make ingestion_demo        # Run data ingestion
 make train                 # Train RF model
 make run-api               # Start FastAPI inference server
 make mlflow-ui             # Launch MLflow tracking UI (mlruns/)
+make docker-build          # Build inference API image
+make docker-run            # Run inference API in a container on :8000
 make lint                  # flake8 src/
 make test                  # pytest tests/
 ```
@@ -85,6 +87,12 @@ data/raw/loans_full_schema.csv
 
 Run the full data pipeline: `make data` (small) or `make data-large` (1.38M rows).
 Start the API: `make run-api` → `http://localhost:8000`
+
+**Run the API in Docker:**
+```bash
+make docker-build   # builds loan-default-api image (bundles models/xgb_loan_default.pkl)
+make docker-run     # serves on http://localhost:8000
+```
 
 **Processed format is parquet** (pyarrow engine) — not CSV. Rebuild with:
 ```python
@@ -151,7 +159,7 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 ## Known Gaps (priority order)
 
 1. **Pinned dependencies** — `requirements.txt` has no versions (only `mlflow` is pinned so far)
-2. **Docker, CI/CD, monitoring** — not yet started <!-- DockerResume: pick up here next -->
+2. **CI/CD, monitoring** — not yet started. Inference API is dockerized (`Dockerfile`, `make docker-build`/`make docker-run`); training/data pipeline is not yet containerized.
 
 ---
 
