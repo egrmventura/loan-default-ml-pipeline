@@ -158,8 +158,7 @@ Data volume was the hard constraint. Moving to the full LendingClub dataset brok
 
 ## Known Gaps (priority order)
 
-1. **Pinned dependencies** — `requirements.txt` has no versions (only `mlflow` is pinned so far)
-2. **CI/CD, monitoring** — not yet started. Inference API is dockerized (`Dockerfile`, `make docker-build`/`make docker-run`); training/data pipeline is not yet containerized.
+1. **CI/CD, monitoring** — not yet started. Inference API is dockerized (`Dockerfile`, `make docker-build`/`make docker-run`); training/data pipeline is not yet containerized.
 
 ---
 
